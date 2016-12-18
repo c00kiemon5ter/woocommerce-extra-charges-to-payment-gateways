@@ -59,12 +59,15 @@ class WC_PaymentGateway_Add_extra_std_Charges{
                 if( (strtolower(get_class($gateway))=='wc_gateway_bacs' || strtolower(get_class($gateway))=='wc_gateway_cheque' || strtolower(get_class($gateway))=='wc_gateway_cod') && strtolower(get_class($gateway))=='wc_gateway_'.$current_section){
                     $current_gateway = $gateway -> id;
                     $extra_charges_id = 'woocommerce_'.$current_gateway.'_extra_charges';
+                    $no_extra_charges_id = 'woocommerce_'.$current_gateway.'_no_extra_charges';
                     $extra_charges_type = $extra_charges_id.'_type';
                     if(isset($_REQUEST['save'])){
                         update_option( $extra_charges_id, $_REQUEST[$extra_charges_id] );
+                        update_option( $no_extra_charges_id, $_REQUEST[$no_extra_charges_id] );
                         update_option( $extra_charges_type, $_REQUEST[$extra_charges_type] );
                     }
                     $extra_charges = get_option( $extra_charges_id);
+                    $no_extra_charges = get_option( $no_extra_charges_id);
                     $extra_charges_type_value = get_option($extra_charges_type);
                 }
             }
@@ -79,7 +82,15 @@ class WC_PaymentGateway_Add_extra_std_Charges{
                 $data += '<fieldset>';
                 $data += '<input style="" name="<?php echo $extra_charges_id?>" id="<?php echo $extra_charges_id?>" type="text" value="<?php echo $extra_charges?>"/>';
                 $data += '<br /></fieldset></td></tr>';
+
                 $data += '<tr valign="top">';
+                $data += '<th scope="row" class="titledesc">Disable Extra Charges above this amount</th>';
+                $data += '<td class="forminp">';
+                $data += '<fieldset>';
+                $data += '<input style="" name="<?php echo $no_extra_charges_id?>" id="<?php echo $no_extra_charges_id?>" type="text" value="<?php echo $no_extra_charges?>"/>';
+                $data += '<br /></fieldset></td></tr>';
+                $data += '<tr valign="top">';
+
                 $data += '<th scope="row" class="titledesc">Extra Charges Type</th>';
                 $data += '<td class="forminp">';
                 $data += '<fieldset>';
@@ -112,10 +123,12 @@ public function calculate_totals( $totals ) {
     if($current_gateway!=''){
         $current_gateway_id = $current_gateway -> id;
         $extra_charges_id = 'woocommerce_'.$current_gateway_id.'_extra_charges';
+        $no_extra_charges_id = 'woocommerce_'.$current_gateway_id.'_no_extra_charges';
         $extra_charges_type = $extra_charges_id.'_type';
         $extra_charges = (float)get_option( $extra_charges_id);
+        $no_extra_charges = (float)get_option( $no_extra_charges_id);
         $extra_charges_type_value = get_option( $extra_charges_type);
-        if($extra_charges){
+        if($extra_charges && $totals->cart_contents_total <= $no_extra_charges){
             if($extra_charges_type_value=="percentage"){
                 $totals -> cart_contents_total = $totals -> cart_contents_total + round(($totals -> cart_contents_total*$extra_charges)/100,2);
             }else{
@@ -137,7 +150,7 @@ public function calculate_totals( $totals ) {
 function add_payment_gateway_extra_charges_row(){
     ?>
     <tr class="payment-extra-charge">
-        <th><?php echo $this->current_gateway_title?> Extra Charges</th>
+        <th><?php echo $this->current_gateway_title . " " . __("Extra Charges", "extra_charges"); ?></th>
         <td><?php if($this->current_gateway_extra_charges_type_value=="percentage"){
             echo $this -> current_gateway_extra_charges.'%';
         }else{
