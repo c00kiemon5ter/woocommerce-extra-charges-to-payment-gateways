@@ -3,13 +3,13 @@
 Plugin Name: WooCommerce Extra Charges To Payment Gateway (Standard)
 Plugin URI: http://www.mydealstm.com
 Description: You can add extra fee for any payment gateways
-Version: 1.0.1
+Version: 1.0.10
 Author: hemsingh1
 Author URI: http://www.mydealstm.com
 */
 
 /**
- * Copyright (c) `date "+%Y"` Sunny Luthra. All rights reserved.
+ * Copyright (c) `date "+%Y"` hemsingh1. All rights reserved.
  *
  * Released under the GPL license
  * http://www.opensource.org/licenses/gpl-license.php
@@ -38,18 +38,25 @@ class WC_PaymentGateway_Add_extra_std_Charges{
         $this -> current_gateway_extra_charges = '';
         add_action('admin_head', array($this, 'add_form_fields'));
         add_action( 'woocommerce_calculate_totals', array( $this, 'calculate_totals' ), 10, 1 );
+   add_action( 'wp_enqueue_scripts',array($this,'load_my_script'));
+    }
+
+    function load_my_script(){
+
         wp_enqueue_script( 'wc-add-extra-charges', $this->plugin_url() . '/assets/app.js', array('wc-checkout'), false, true );
     }
+
 
     function add_form_fields(){
         global $woocommerce;
          // Get current tab/section
         $current_tab        = ( empty( $_GET['tab'] ) ) ? '' : sanitize_text_field( urldecode( $_GET['tab'] ) );
         $current_section    = ( empty( $_REQUEST['section'] ) ) ? '' : sanitize_text_field( urldecode( $_REQUEST['section'] ) );
-        if($current_tab == 'checkout' && ($current_section=='wc_gateway_bacs'||$current_section=='wc_gateway_cheque'||$current_section=='wc_gateway_cod')){
+
+        if($current_tab == 'checkout' && $current_section!='' && ($current_section=='bacs'||$current_section=='cod'||$current_section=='cheque')){
             $gateways = $woocommerce->payment_gateways->payment_gateways();
             foreach($gateways as $gateway){
-                if(strtolower(get_class($gateway)==$current_section)){
+                if( (strtolower(get_class($gateway))=='wc_gateway_bacs' || strtolower(get_class($gateway))=='wc_gateway_cheque' || strtolower(get_class($gateway))=='wc_gateway_cod') && strtolower(get_class($gateway))=='wc_gateway_'.$current_section){
                     $current_gateway = $gateway -> id;
                     $extra_charges_id = 'woocommerce_'.$current_gateway.'_extra_charges';
                     $extra_charges_type = $extra_charges_id.'_type';
@@ -107,7 +114,7 @@ public function calculate_totals( $totals ) {
         $extra_charges_id = 'woocommerce_'.$current_gateway_id.'_extra_charges';
         $extra_charges_type = $extra_charges_id.'_type';
         $extra_charges = (float)get_option( $extra_charges_id);
-        $extra_charges_type_value = get_option( $extra_charges_type); 
+        $extra_charges_type_value = get_option( $extra_charges_type);
         if($extra_charges){
             if($extra_charges_type_value=="percentage"){
                 $totals -> cart_contents_total = $totals -> cart_contents_total + round(($totals -> cart_contents_total*$extra_charges)/100,2);
@@ -118,8 +125,9 @@ public function calculate_totals( $totals ) {
             $this -> current_gateway_extra_charges = $extra_charges;
             $this -> current_gateway_extra_charges_type_value = $extra_charges_type_value;
             add_action( 'woocommerce_review_order_before_order_total',  array( $this, 'add_payment_gateway_extra_charges_row'));
-          
+
             add_action( 'woocommerce_cart_totals_before_order_total',  array( $this, 'add_payment_gateway_extra_charges_row'));
+
         }
 
     }
@@ -146,7 +154,7 @@ function add_payment_gateway_extra_charges_row(){
      * @return string
      */
     public function plugin_url() {
-        if ( $this->plugin_url ) return $this->plugin_url;
+
         return $this->plugin_url = untrailingslashit( plugins_url( '/', __FILE__ ) );
     }
 
